@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.serviceA.name }}
+spec:
+  replicas: {{ .Values.serviceA.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.serviceA.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.serviceA.name }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: {{ .Values.serviceA.name }}
+          image: "{{ .Values.serviceA.image.repository }}:{{ .Values.serviceA.image.tag }}"
+          imagePullPolicy: {{ .Values.serviceA.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.serviceA.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.serviceA.name }}
+spec:
+  selector:
+    app: {{ .Values.serviceA.name }}
+  ports:
+    - port: 80
+      targetPort: {{ .Values.serviceA.port }}
+  type: ClusterIP

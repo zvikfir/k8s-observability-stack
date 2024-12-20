@@ -1,0 +1,219 @@
+adminPassword: admin
+
+service:
+  type: ClusterIP
+
+persistence:
+  enabled: false
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    deleteDatasources:
+      - name: Prometheus
+        orgId: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      orgId: 1
+      url: http://prometheus-server.observability.svc.cluster.local:80
+      isDefault: true
+      version: 1
+      editable: true
+
+grafana.ini:
+  paths:
+    datasources: /etc/grafana/provisioning/datasources
+    dashboards: /etc/grafana/provisioning/dashboards
+  auth:
+    disable_login_form: false
+  auth.anonymous:
+    enabled: true
+    org_role: Viewer
+  log:
+    level: debug
+    mode: console
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards
+
+dashboards:
+  default:
+    kong-dashboard:
+      json: |
+        {
+          "title": "Kong Dashboard",
+          "panels": [
+            {
+              "title": "Request Rate",
+              "type": "timeseries",
+              "datasource": {"type": "prometheus"},
+              "targets": [
+                {
+                  "expr": "sum(rate(kong_http_requests_total[5m])) by (service)",
+                  "legendFormat": "{{service}}"
+                }
+              ]
+            },
+            {
+              "title": "Latency",
+              "type": "timeseries",
+              "datasource": {"type": "prometheus"},
+              "targets": [
+                {
+                  "expr": "rate(kong_latency_count[5m])",
+                  "legendFormat": "{{type}}"
+                }
+              ]
+            }
+          ]
+        }
+    services-dashboard:
+      json: |
+        {
+          "annotations": {
+            "list": []
+          },
+          "editable": true,
+          "graphTooltip": 0,
+          "panels": [
+            {
+              "title": "Request Rate",
+              "type": "timeseries",
+              "datasource": {"type": "prometheus"},
+              "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+              "targets": [
+                {
+                  "expr": "sum(rate(http_request_duration_seconds_count[5m])) by (route)",
+                  "legendFormat": "{{route}}"
+                }
+              ]
+            },
+            {
+              "title": "Average Response Time",
+              "type": "timeseries",
+              "datasource": {"type": "prometheus"},
+              "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+              "targets": [
+                {
+                  "expr": "rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m])",
+                  "legendFormat": "{{route}}"
+                }
+              ]
+            },
+            {
+              "title": "HTTP Status Codes",
+              "type": "timeseries",
+              "datasource": {"type": "prometheus"},
+              "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+              "targets": [
+                {
+                  "expr": "sum(rate(http_request_duration_seconds_count[5m])) by (status_code)",
+                  "legendFormat": "{{status_code}}"
+                }
+              ]
+            },
+            {
+              "title": "Response Time Distribution",
+              "type": "heatmap",
+              "datasource": {"type": "prometheus"},
+              "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+              "targets": [
+                {
+                  "expr": "sum(rate(http_request_duration_seconds_bucket[5m])) by (le)",
+                  "format": "heatmap"
+                }
+              ]
+            }
+          ],
+          "refresh": "10s",
+          "schemaVersion": 38,
+          "style": "dark",
+          "time": {
+            "from": "now-1h",
+            "to": "now"
+          },
+          "title": "Services Dashboard",
+          "version": 1
+        }
+    operations-dashboard:
+      json: |
+        {
+          "title": "Operations Dashboard",
+          "panels": [
+            {
+              "title": "Service Health",
+              "type": "gauge",
+              "datasource": {"type": "prometheus"},
+              "targets": [
+                {
+                  "expr": "sum by (service) (kube_pod_status_ready{condition='true'}) / sum by (service) (kube_pod_status_ready)",
+                  "legendFormat": "{{service}}"
+                }
+              ]
+            },
+            {
+              "title": "Pod Restarts",
+              "type": "table",
+              "datasource": {"type": "prometheus"},
+              "targets": [
+                {
+                  "expr": "sum by (pod) (kube_pod_container_status_restarts_total)",
+                  "legendFormat": "{{pod}}"
+                }
+              ]
+            },
+            {
+              "title": "CPU Usage vs Requests",
+              "type": "timeseries",
+              "datasource": {"type": "prometheus"},
+              "targets": [
+                {
+                  "expr": "sum(rate(container_cpu_usage_seconds_total[5m])) by (pod) / sum(kube_pod_container_resource_requests_cpu_cores) by (pod)",
+                  "legendFormat": "{{pod}}"
+                }
+              ]
+            },
+            {
+              "title": "Memory Usage vs Requests",
+              "type": "timeseries",
+              "datasource": {"type": "prometheus"},
+              "targets": [
+                {
+                  "expr": "sum(container_memory_working_set_bytes) by (pod) / sum(kube_pod_container_resource_requests_memory_bytes) by (pod)",
+                  "legendFormat": "{{pod}}"
+                }
+              ]
+            },
+            {
+              "title": "Pods Nearing Resource Limits",
+              "type": "heatmap",
+              "datasource": {"type": "prometheus"},
+              "targets": [
+                {
+                  "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total[5m])) / sum by (pod) (kube_pod_container_resource_limits_cpu_cores) > 0.9",
+                  "format": "heatmap"
+                }
+              ]
+            }
+          ],
+          "refresh": "10s",
+          "schemaVersion": 38,
+          "style": "dark",
+          "time": {
+            "from": "now-1h",
+            "to": "now"
+          },
+          "version": 1
+        }

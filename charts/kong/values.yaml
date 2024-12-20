@@ -1,0 +1,87 @@
+# Basic Kong configuration
+env:
+  database: "off"  # Enable DB-less mode
+  plugins: prometheus,correlation-id  # Add prometheus plugin
+
+# Proxy configuration
+proxy:
+  enabled: true
+  type: ClusterIP
+  http:
+    enabled: true
+    port: 8000
+  tls:
+    enabled: false
+
+# Admin API configuration
+admin:
+  enabled: true
+  type: ClusterIP
+  http:
+    enabled: true
+    port: 8001
+
+# Disable unnecessary components
+ingressController:
+  enabled: false
+enterprise:
+  enabled: false
+manager:
+  enabled: true
+  type: ClusterIP
+  http:
+    enabled: true
+    port: 8002
+portal:
+  enabled: false
+
+# Add status endpoint for metrics
+status:
+  enabled: true
+  http:
+    enabled: true
+    port: 8100
+
+# DB-less configuration with declarative services
+dblessConfig:
+  config: |
+    _format_version: "1.1"
+    _transform: true
+
+    plugins:
+    - name: prometheus
+      protocols: [http]
+      config:
+        status_code_metrics: true
+        latency_metrics: true
+        upstream_health_metrics: true
+        bandwidth_metrics: true
+        per_consumer: true
+    - name: correlation-id
+      config:
+        header_name: X-Correlation-ID
+        generator: uuid#counter
+        echo_downstream: true
+    
+    services:
+    - name: service-a
+      url: http://service-a.observability.svc.cluster.local:80
+      routes:
+      - name: service-a-route
+        paths:
+        - /service-a
+        strip_path: true
+    
+    - name: service-b
+      url: http://service-b.observability.svc.cluster.local:80
+      routes:
+      - name: service-b-route
+        paths:
+        - /service-b
+        strip_path: true
+
+# Add Prometheus annotations
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8001"
+  prometheus.io/path: "/metrics"

@@ -1,0 +1,17 @@
+serviceA:
+  name: service-a
+  replicaCount: 1
+  image:
+    repository: service-a
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 3000
+
+serviceB:
+  name: service-b
+  replicaCount: 1
+  image:
+    repository: service-b
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 3001

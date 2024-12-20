@@ -1,0 +1,5 @@
+apiVersion: v2
+name: services
+description: Helm chart for microservices
+version: 0.1.0
+type: application
