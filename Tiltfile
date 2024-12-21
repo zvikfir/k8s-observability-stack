@@ -36,6 +36,14 @@ helm_remote('kong',
            namespace='observability',
            values='charts/kong/values.yaml')
 
+# Add Loki installation
+helm_remote('loki',
+           repo_name='grafana',
+           repo_url='https://grafana.github.io/helm-charts',
+           release_name='loki',
+           namespace='observability',
+           values='charts/monitoring/loki-values.yaml')
+
 # Install services chart with namespace
 k8s_yaml(helm('charts/services', namespace='observability'))
 
@@ -67,3 +75,10 @@ k8s_resource('grafana',
     port_forwards='3002:3000',
     labels=['monitoring'],
     resource_deps=['prometheus-server'])
+
+# Add Loki resource configuration
+k8s_resource('loki', 
+    port_forwards='3100:3100',  # Add port forwarding
+    labels=['monitoring'],
+    resource_deps=['prometheus-server'])
+

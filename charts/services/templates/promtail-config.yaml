@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+data:
+  promtail.yaml: |
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+    
+    positions:
+      filename: /tmp/positions.yaml
+    
+    clients:
+      - url: http://loki-0.loki-headless.observability.svc.cluster.local:3100/loki/api/v1/push
+        tenant_id: "anonymous"
+        headers:
+          X-Scope-OrgID: "anonymous"
+    
+    scrape_configs:
+      - job_name: pod-logs
+        static_configs:
+          - targets:
+              - localhost
+            labels:
+              __path__: /var/log/**/*.log
+              job: pod-logs
+        pipeline_stages:
+          - timestamp:
+              source: time
+              format: RFC3339
+          - json:
+              expressions:
+                level: level
+                msg: msg
+          - labels:
+              level:
+        relabel_configs:
+          - source_labels: ['__path__']
+            target_label: 'filename'
+          - source_labels: ['filename']
+            regex: '/var/log/(.+)/.*\.log'
+            target_label: 'app'
