@@ -21,6 +21,19 @@ datasources:
       isDefault: true
       version: 1
       editable: true
+    - name: Loki
+      type: loki
+      access: proxy
+      orgId: 1
+      url: http://loki-0.loki-headless.observability.svc.cluster.local:3100
+      version: 1
+      editable: true
+      jsonData:
+        maxLines: 1000
+        timeout: 30
+        httpHeaderName1: "X-Scope-OrgID"
+      secureJsonData:
+        httpHeaderValue1: "anonymous"
 
 grafana.ini:
   paths:
@@ -216,4 +229,49 @@ dashboards:
             "to": "now"
           },
           "version": 1
+        }
+    logs-dashboard:
+      json: |
+        {
+          "title": "Application Logs",
+          "panels": [
+            {
+              "title": "Application Logs",
+              "type": "logs",
+              "datasource": {"type": "loki"},
+              "gridPos": {"h": 12, "w": 24, "x": 0, "y": 0},
+              "targets": [
+                {
+                  "expr": "{namespace=\"observability\"}"
+                }
+              ],
+              "options": {
+                "showTime": true,
+                "showLabels": true,
+                "showCommonLabels": true,
+                "wrapLogMessage": true,
+                "prettifyLogMessage": true,
+                "enableLogDetails": true
+              }
+            },
+            {
+              "title": "Log Volume",
+              "type": "timeseries",
+              "datasource": {"type": "loki"},
+              "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+              "targets": [
+                {
+                  "expr": "sum(count_over_time({namespace=\"observability\"}[5m])) by (container)",
+                  "legendFormat": "{{container}}"
+                }
+              ]
+            }
+          ],
+          "refresh": "10s",
+          "schemaVersion": 38,
+          "style": "dark",
+          "time": {
+            "from": "now-1h",
+            "to": "now"
+          }
         }

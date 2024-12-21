@@ -22,6 +22,32 @@ spec:
           imagePullPolicy: {{ .Values.serviceA.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.serviceA.port }}
+          volumeMounts:
+            - name: service-logs
+              mountPath: /var/log/service-a
+        - name: promtail
+          image: grafana/promtail:2.8.0
+          args:
+            - -config.file=/etc/promtail/promtail.yaml
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          volumeMounts:
+            - name: promtail-config
+              mountPath: /etc/promtail
+            - name: service-logs
+              mountPath: /var/log/service-a
+      volumes:
+        - name: promtail-config
+          configMap:
+            name: promtail-config
+        - name: service-logs
+          emptyDir:
+            sizeLimit: 10Mi
 ---
 apiVersion: v1
 kind: Service

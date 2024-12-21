@@ -2,6 +2,8 @@ import express from 'express';
 import { trace } from '@opentelemetry/api';
 import promClient from 'prom-client';
 import responseTime from 'response-time';
+import fs from 'fs';
+import path from 'path';
 
 // Initialize Prometheus metrics
 const collectDefaultMetrics = promClient.collectDefaultMetrics;
@@ -13,6 +15,35 @@ const httpRequestDuration = new promClient.Histogram({
   help: 'Duration of HTTP requests in seconds',
   labelNames: ['method', 'route', 'status_code'],
 });
+
+// Add logging configuration
+const logDir = '/var/log/service-a';
+const logFile = path.join(logDir, 'service-a.log');
+
+// Create log directory if it doesn't exist
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
+
+// Override console.log and console.error
+const originalLog = console.log;
+const originalError = console.error;
+
+console.log = (...args) => {
+  const message = args.map(arg => 
+    typeof arg === 'object' ? JSON.stringify(arg) : arg
+  ).join(' ');
+  fs.appendFileSync(logFile, `${new Date().toISOString()} INFO ${message}\n`);
+  originalLog.apply(console, args);
+};
+
+console.error = (...args) => {
+  const message = args.map(arg => 
+    typeof arg === 'object' ? JSON.stringify(arg) : arg
+  ).join(' ');
+  fs.appendFileSync(logFile, `${new Date().toISOString()} ERROR ${message}\n`);
+  originalError.apply(console, args);
+};
 
 const app = express();
 const port = process.env.PORT || 3000;
